@@ -3,7 +3,7 @@ import random
 
 def init_game():
     pygame.init()
-    screen = pygame.display.set_mode((400, 400))
+    screen = pygame.display.set_mode((400, 450))
     pygame.display.set_caption("2048 Celil")
     return screen
 
@@ -13,8 +13,11 @@ def add_random_tile(grid):
         i, j = random.choice(empty)
         grid[i][j] = 2 if random.random() < 0.9 else 4
 
-def draw_grid(screen, grid):
+def draw_grid(screen, grid, score):
     font = pygame.font.SysFont(None, 48)
+    score_font = pygame.font.SysFont(None, 36)
+
+    # Couleurs
     colors = {
         0: (200, 200, 200),
         2: (238, 228, 218),
@@ -29,17 +32,23 @@ def draw_grid(screen, grid):
         1024: (237, 197, 63),
         2048: (237, 194, 46),
     }
+
+    pygame.draw.rect(screen, (150, 140, 130), (0, 0, 400, 50))
+    score_text = score_font.render(f"Score: {score}", True, (255, 255, 255))
+    screen.blit(score_text, (10, 10))
+
+
     for i in range(4):
         for j in range(4):
             value = grid[i][j]
             color = colors.get(value, (60, 58, 50))
-            pygame.draw.rect(screen, color, (j * 100, i * 100, 100, 100))
+            pygame.draw.rect(screen, color, (j * 100, i * 100 + 50, 100, 100))
             if value:
                 text = font.render(str(value), True, (0, 0, 0))
-                rect = text.get_rect(center=(j * 100 + 50, i * 100 + 50))
+                rect = text.get_rect(center=(j * 100 + 50, i * 100 + 100))
                 screen.blit(text, rect)
 
-def move_left(grid):
+def move_left(grid, score):
     moved = False
     for i in range(4):
         tiles = [v for v in grid[i] if v != 0]
@@ -47,7 +56,9 @@ def move_left(grid):
         j = 0
         while j < len(tiles):
             if j + 1 < len(tiles) and tiles[j] == tiles[j + 1]:
-                merged.append(tiles[j] * 2)
+                new_value = tiles[j] * 2
+                merged.append(new_value)
+                score += new_value
                 j += 2
                 moved = True
             else:
@@ -57,30 +68,30 @@ def move_left(grid):
         if merged != grid[i]:
             moved = True
         grid[i] = merged
-    return moved
+    return moved, score
 
-def move_right(grid):
+def move_right(grid, score):
     for i in range(4):
         grid[i] = grid[i][::-1]
-    moved = move_left(grid)
+    moved, score = move_left(grid, score)
     for i in range(4):
         grid[i] = grid[i][::-1]
-    return moved
+    return moved, score
 
 def transpose(grid):
     return [list(row) for row in zip(*grid)]
 
-def move_up(grid):
+def move_up(grid, score):
     grid[:] = transpose(grid)
-    moved = move_left(grid)
+    moved, score = move_left(grid, score)
     grid[:] = transpose(grid)
-    return moved
+    return moved, score
 
-def move_down(grid):
+def move_down(grid, score):
     grid[:] = transpose(grid)
-    moved = move_right(grid)
+    moved, score = move_right(grid, score)
     grid[:] = transpose(grid)
-    return moved
+    return moved, score
 
 def can_move(grid):
     for i in range(4):
@@ -100,6 +111,7 @@ def main():
     add_random_tile(grid)
     clock = pygame.time.Clock()
     running = True
+    score = 0
 
     while running:
         moved = False
@@ -108,22 +120,24 @@ def main():
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
-                    moved = move_left(grid)
+                    moved, score = move_left(grid, score)
                 elif event.key == pygame.K_RIGHT:
-                    moved = move_right(grid)
+                    moved, score = move_right(grid, score)
                 elif event.key == pygame.K_UP:
-                    moved = move_up(grid)
+                    moved, score = move_up(grid, score)
                 elif event.key == pygame.K_DOWN:
-                    moved = move_down(grid)
+                    moved, score = move_down(grid, score)
         if moved:
             add_random_tile(grid)
         screen.fill((187, 173, 160))
-        draw_grid(screen, grid)
+        draw_grid(screen, grid, score)
         pygame.display.flip()
         if not can_move(grid):
             pygame.time.wait(1000)
             running = False
         clock.tick(60)
+
+    print("Game Over! Final Score:", score)
     pygame.quit()
 
 if __name__ == "__main__":
